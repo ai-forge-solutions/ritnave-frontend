@@ -24,13 +24,14 @@ Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KE
 
 ## Límites y comportamiento
 
-- 30 MiB por archivo en la web (límite de transporte HTTP/1 Cloud Run); máximo 10 minutos validado también por el backend.
+- 50 MiB por archivo; máximo 10 minutos validado también por el backend.
+- El audio no pasa por este servidor: el navegador sube con un PUT a una URL firmada de GCS (15 min, tamaño y tipo exactos) y descarga/reproduce mediante una redirección a una URL firmada de 10 min. El servidor solo pide esas URLs a la API privada con la identidad del usuario. El bucket necesita CORS para `APP_ORIGIN` (`APP_ORIGINS` en el despliegue del backend).
 - Voz/instrumental únicamente; sin planes, cobros ni separación de otros instrumentos ficticios.
 - Email verificado y tenant específico obligatorios. Nunca se usa el pool por defecto de NutrIA.
 - Sesión cifrada de hasta 7 días, cookie HttpOnly/SameSite=Lax/Secure en HTTPS; renovación del ID token en servidor sin ampliar la expiración original. Logout elimina la cookie local; no revoca todas las sesiones de Firebase. No hay tokens en localStorage.
 - POST con Origin exacto; no se abre CORS. Las claves idempotentes sobreviven a reintentos manuales. No hay reenvíos automáticos de audio.
 - Estado y errores reales, sin porcentajes de procesamiento ficticios. Historial de IDs/nombres local al navegador y separado por usuario; no se promete historial entre dispositivos.
-- Resultados privados; limpieza de objetos asíncrona tras un día. Los reproductores reciben streams autenticados; sin URLs públicas de GCS.
+- Resultados privados; limpieza de objetos asíncrona tras un día. Los reproductores reciben URLs firmadas de corta duración emitidas solo al propietario; nunca URLs públicas de GCS.
 - Firebase gestiona emails y sus enlaces con el handler predeterminado y vuelta a `/login`. La ruta `/actualizar-password?oobCode=…` también permite confirmar un código de recuperación válido; sin código falla sin cambiar contraseñas.
 
 ## Evidencia y límites
