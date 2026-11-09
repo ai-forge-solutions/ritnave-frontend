@@ -2,18 +2,22 @@
 
 ## 1. Firebase aislado
 
-Proyecto previsto: `nutria-9c71e`. Usar **un tenant nuevo de Identity Platform para ritnave**, con email/contraseña permitido (`allowPasswordSignup=true`), no el directorio de usuarios por defecto de NutrIA. No reutilizar, importar, enumerar ni editar sus cuentas.
+Proyecto Firebase **dedicado**: `ritnave-auth` (organización ai-forges.com, plan Spark, sin tenants). Los usuarios de ritnave quedan completamente separados de NutrIA (`nutria-9c71e`), que no se modifica. Email/contraseña activado; dominios autorizados: `ritnave.com`, `www.ritnave.com`, `ritnave.netlify.app`, `localhost`. El código admite además un tenant opcional (`FIREBASE_AUTH_TENANT_ID`) por si en el futuro se usa Identity Platform multitenant.
 
-Si el proyecto no tiene habilitados Identity Platform y multitenancy, su activación es un paso de infraestructura sujeto a aprobación y revisión de precios/impacto. No se activa desde este código. Crear el tenant desde Identity Platform → Tenants y guardar su ID exacto. No hay más código por implementar: esta es configuración del proveedor.
+API key `ritnave web (Netlify server)` creada y restringida a Identity Toolkit y Secure Token. Copiar su valor a Netlify sin pegarlo en chats:
 
-Configurar una API key dedicada limitada a Identity Toolkit y Secure Token, y el dominio público exacto como dominio autorizado. Usar los emails/handler predeterminados Firebase con `continueUrl=APP_ORIGIN/login`; no cambiar las plantillas globales de NutrIA para adaptar el diseño. Pruebas de aceptación tras despliegue: registro nuevo, email de confirmación recibido, login bloqueado antes de verificar, login posterior y recuperación real.
+```sh
+CLOUDSDK_CONFIG=~/.config/gcloud-ritnave gcloud services api-keys get-key-string cd6f5d19-54d3-4ec4-8761-3533ded89c3b --project=ritnave-auth --format='value(keyString)' | pbcopy
+```
+
+Usar los emails/handler predeterminados Firebase con `continueUrl=APP_ORIGIN/login`; las plantillas son las de `ritnave-auth` y pueden personalizarse sin afectar a NutrIA. Pruebas de aceptación tras despliegue: registro nuevo, email de confirmación recibido, login bloqueado antes de verificar, login posterior y recuperación real.
 
 ## 2. Variables
 
 | Variable | Dónde | Tipo |
 |---|---|---|
-| FIREBASE_AUTH_PROJECT_ID | Frontend y API | No secreto; `nutria-9c71e` |
-| FIREBASE_AUTH_TENANT_ID | Frontend y API | No secreto; tenant nuevo obligatorio |
+| FIREBASE_AUTH_PROJECT_ID | Frontend y API | No secreto; `ritnave-auth` |
+| FIREBASE_AUTH_TENANT_ID | Frontend y API | Opcional. Vacío con el proyecto dedicado `ritnave-auth` (sin tenants) |
 | FIREBASE_WEB_API_KEY | Solo servidor frontend | Secret Manager; no NEXT_PUBLIC |
 | SESSION_SECRET | Solo servidor frontend | 32 bytes aleatorios en base64url canónico; Secret Manager |
 | APP_ORIGIN | Solo servidor frontend | Origen HTTPS exacto que abrirán los usuarios, sin ruta |

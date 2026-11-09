@@ -9,7 +9,7 @@ export async function verifyIdToken(token:string):Promise<VerifiedToken> {
   try {
     if(typeof token !== 'string' || token.length > 10000) throw new Error();
     const {payload:p} = await jwtVerify(token,jwks,{algorithms:['RS256'],audience:config.projectId,issuer:`https://securetoken.google.com/${config.projectId}`});
-    if(typeof p.sub !== 'string' || !p.sub || p.sub.length > 128 || /[\x00-\x20\x7f]/.test(p.sub) || !Number.isFinite(p.exp) || (p.firebase as {tenant?:string}|undefined)?.tenant !== config.tenantId || typeof p.email !== 'string' || p.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) throw new Error();
+    if(typeof p.sub !== 'string' || !p.sub || p.sub.length > 128 || /[\x00-\x20\x7f]/.test(p.sub) || !Number.isFinite(p.exp) || (p.firebase as {tenant?:string}|undefined)?.tenant !== config.tenantId /* undefined = no tenant allowed */ || typeof p.email !== 'string' || p.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) throw new Error();
     if(p.email_verified !== true) throw new AppError(403,'Confirma tu correo electrónico','EMAIL_NOT_VERIFIED');
     return {user:{id:p.sub,email:p.email,...(typeof p.name === 'string' && p.name.length<=100 ? {name:p.name}: {})},expiresAt:p.exp!};
   } catch(error) {
@@ -39,7 +39,7 @@ async function providerFetch(url:string,init:RequestInit):Promise<Record<string,
 export async function firebaseRequest(action:string,body:Record<string,unknown>):Promise<Record<string,unknown>> {
   const config=getConfig();
   if(!actions.has(action)) throw new AppError(400,'Operación no válida');
-  return providerFetch(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...body,tenantId:config.tenantId})});
+  return providerFetch(`https://identitytoolkit.googleapis.com/v1/accounts:${action}?key=${encodeURIComponent(config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(config.tenantId?{...body,tenantId:config.tenantId}:body)});
 }
 export async function refreshIdToken(refreshToken:string):Promise<{idToken:string;refreshToken:string}> {
   const config=getConfig();

@@ -23,7 +23,7 @@ it('logs in with encrypted cookie, returns me and clears logout',async()=>{
 it('fails closed on missing configuration and missing sessions',async()=>{
  expect(await (await GET(new Request('https://app.example/api/auth/me'),context('me'))).json()).toEqual({user:null});
  await expect(requireSession(new Request('https://app.example'))).rejects.toMatchObject({status:401});
- vi.stubEnv('FIREBASE_AUTH_TENANT_ID',''); expect((await post('login',{email:user.email,password:'password1'})).status).toBe(503);
+ vi.stubEnv('FIREBASE_WEB_API_KEY',''); expect((await post('login',{email:user.email,password:'password1'})).status).toBe(503);
 });
 it('rejects CSRF and malformed or oversized JSON before provider calls',async()=>{
  for(const headers of [{origin:'https://evil.example'},{origin:''},{'sec-fetch-site':'cross-site'}] as Record<string,string>[]) expect((await post('login',{},headers)).status).toBe(403);
