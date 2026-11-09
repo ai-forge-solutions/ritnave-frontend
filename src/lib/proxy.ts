@@ -10,7 +10,6 @@
 export type ProxyDeps = {
  session: (request: Request) => Promise<{user:{id:string;email:string;name?:string};idToken:string;cookie?:string}>;
  config: () => {apiUrl:string;appOrigin:string};
- iam: (audience:string) => Promise<string>;
  fetch: typeof fetch;
 };
 const statuses = new Set(['dispatch_pending','queued','running','succeeded','failed']);
@@ -68,11 +67,13 @@ export function makeProxy(deps: ProxyDeps) {
     }else body=JSON.stringify({filename});
     headers.set('Content-Type','application/json');headers.set('Idempotency-Key',key);
    }else target+='/'+path[0]+(isFile?'/files/'+path[2]+'/link'+(input.searchParams.get('download')==='1'?'?download=1':''):'');
-   headers.set('Authorization','Bearer '+session.idToken);headers.set('X-Serverless-Authorization',await deps.iam(config.apiUrl));
+   // The user's verified Firebase ID token is the only credential: the API checks signature,
+   // tenant and verified email itself. No Google service identity exists on Netlify.
+   headers.set('Authorization','Bearer '+session.idToken);
    // Admission downloads + probes the staged audio server-side: allow a few minutes.
    const upstream=await deps.fetch(target,{method:request.method,headers,body,redirect:'error',cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(isAdmit?240000:30000)])});
    if(!upstream.ok){
-    if([401,403].includes(upstream.status))return fail(503,'El servidor de procesamiento no está autorizado o configurado.');
+    if([401,403].includes(upstream.status))return fail(503,'El servidor de procesamiento rechazó la sesión o no está configurado.');
     if(isAdmit&&upstream.status===404)return fail(409,'No encontramos el audio subido. Vuelve a enviarlo con la misma clave.');
     return fail(upstream.status,'El servicio no pudo completar la solicitud. Conserva la clave para reintentar.');
    }

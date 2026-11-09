@@ -16,7 +16,7 @@ npm run build
 npm run test:e2e
 ```
 
-El frontend no llama a Cloud Run desde el navegador. Su servidor verifica la sesión y reenvía dos identidades separadas: IAM de su cuenta runtime en `X-Serverless-Authorization`, e ID token Firebase del usuario en `Authorization`. Nunca sustituye al usuario por una identidad compartida ni acepta un owner enviado por el cliente.
+El navegador no llama a la API directamente. El servidor del frontend verifica la sesión y reenvía únicamente el ID token Firebase del usuario en `Authorization`; la API verifica firma, tenant y email ella misma. No hay ninguna identidad ni clave de Google en el frontend. Nunca sustituye al usuario por una identidad compartida ni acepta un owner enviado por el cliente.
 
 ## Configuración pendiente de despliegue
 

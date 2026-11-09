@@ -17,7 +17,7 @@ Configurar una API key dedicada limitada a Identity Toolkit y Secure Token, y el
 | FIREBASE_WEB_API_KEY | Solo servidor frontend | Secret Manager; no NEXT_PUBLIC |
 | SESSION_SECRET | Solo servidor frontend | 32 bytes aleatorios en base64url canónico; Secret Manager |
 | APP_ORIGIN | Solo servidor frontend | Origen HTTPS exacto que abrirán los usuarios, sin ruta |
-| RITNAVE_API_URL | Solo servidor frontend | URL raíz privada actual de Cloud Run; también audience IAM |
+| RITNAVE_API_URL | Solo servidor frontend | URL raíz de la API en Cloud Run (sin IAM; protegida por token Firebase) |
 
 Generar SESSION_SECRET con `node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"` en un entorno privado. No pegar secretos en chat, Git, Docker ARG ni variables NEXT_PUBLIC. Rotar SESSION_SECRET invalida las cookies existentes.
 
