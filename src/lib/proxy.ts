@@ -70,8 +70,8 @@ export function makeProxy(deps: ProxyDeps) {
    // The user's verified Firebase ID token is the only credential: the API checks signature,
    // tenant and verified email itself. No Google service identity exists on Netlify.
    headers.set('Authorization','Bearer '+session.idToken);
-   // Admission downloads + probes the staged audio server-side: allow a few minutes.
-   const upstream=await deps.fetch(target,{method:request.method,headers,body,redirect:'error',cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(isAdmit?240000:30000)])});
+   // Netlify functions stop at 60 s: abort first so the user gets a retryable, idempotent 503.
+   const upstream=await deps.fetch(target,{method:request.method,headers,body,redirect:'error',cache:'no-store',signal:AbortSignal.any([request.signal,AbortSignal.timeout(isAdmit?55000:20000)])});
    if(!upstream.ok){
     if([401,403].includes(upstream.status))return fail(503,'El servidor de procesamiento rechazó la sesión o no está configurado.');
     if(isAdmit&&upstream.status===404)return fail(409,'No encontramos el audio subido. Vuelve a enviarlo con la misma clave.');
