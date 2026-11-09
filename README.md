@@ -16,25 +16,32 @@ npm run build
 npm run test:e2e
 ```
 
-El frontend no llama a Cloud Run desde el navegador. Su servidor verifica la sesión y reenvía dos identidades separadas: IAM de su cuenta runtime en `X-Serverless-Authorization`, e ID token Firebase del usuario en `Authorization`. Nunca sustituye al usuario por una identidad compartida ni acepta un owner enviado por el cliente.
+El navegador no llama a la API directamente. El servidor del frontend verifica la sesión y reenvía únicamente el ID token Firebase del usuario en `Authorization`; la API verifica firma, tenant y email ella misma. No hay ninguna identidad ni clave de Google en el frontend. Nunca sustituye al usuario por una identidad compartida ni acepta un owner enviado por el cliente.
 
 ## Configuración pendiente de despliegue
 
-Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KEY` y `SESSION_SECRET`. Configuración no secreta: `FIREBASE_AUTH_PROJECT_ID`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN`, `RITNAVE_API_URL`. Google ADC gestionado por la identidad de Cloud Run; ninguna clave JSON runtime. El backend necesita su nuevo código de verificación Firebase y los mismos proyecto/tenant.
+Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KEY` y `SESSION_SECRET`. Configuración no secreta: `FIREBASE_AUTH_PROJECT_ID`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN`, `RITNAVE_API_URL`. Ninguna credencial de Google en el frontend. El backend verifica el token Firebase con los mismos proyecto/tenant.
 
 ## Límites y comportamiento
 
-- 30 MiB por archivo en la web (límite de transporte HTTP/1 Cloud Run); máximo 10 minutos validado también por el backend.
+- 50 MiB por archivo; máximo 10 minutos validado también por el backend.
+- El audio no pasa por este servidor: el navegador sube con un PUT a una URL firmada de GCS (15 min, tamaño y tipo exactos) y descarga/reproduce mediante una redirección a una URL firmada de 10 min. El servidor solo pide esas URLs a la API privada con la identidad del usuario. El bucket necesita CORS para `APP_ORIGIN` (`APP_ORIGINS` en el despliegue del backend).
 - Voz/instrumental únicamente; sin planes, cobros ni separación de otros instrumentos ficticios.
 - Email verificado y tenant específico obligatorios. Nunca se usa el pool por defecto de NutrIA.
 - Sesión cifrada de hasta 7 días, cookie HttpOnly/SameSite=Lax/Secure en HTTPS; renovación del ID token en servidor sin ampliar la expiración original. Logout elimina la cookie local; no revoca todas las sesiones de Firebase. No hay tokens en localStorage.
 - POST con Origin exacto; no se abre CORS. Las claves idempotentes sobreviven a reintentos manuales. No hay reenvíos automáticos de audio.
 - Estado y errores reales, sin porcentajes de procesamiento ficticios. Historial de IDs/nombres local al navegador y separado por usuario; no se promete historial entre dispositivos.
-- Resultados privados; limpieza de objetos asíncrona tras un día. Los reproductores reciben streams autenticados; sin URLs públicas de GCS.
+- Resultados privados; limpieza de objetos asíncrona tras un día. Los reproductores reciben URLs firmadas de corta duración emitidas solo al propietario; nunca URLs públicas de GCS.
 - Firebase gestiona emails y sus enlaces con el handler predeterminado y vuelta a `/login`. La ruta `/actualizar-password?oobCode=…` también permite confirmar un código de recuperación válido; sin código falla sin cambiar contraseñas.
 
 ## Evidencia y límites
 
-Los tests de UI interceptan APIs de forma explícita; no prueban Firebase/Cloud Run en vivo. Los tests de firma usan RSA real con una fuente local de clave pública. El build no necesita secretos. La validación pública de registro/email/login → GPU queda para el despliegue y su configuración. No se han creado usuarios reales, enviado emails, migrado bases ni desplegado estos cambios.
+Los tests de UI interceptan APIs de forma explícita; no prueban Firebase ni la API en vivo. Los tests de firma usan RSA real con una fuente local de clave pública. El build no necesita secretos. La validación pública de registro/email/login → GPU queda para el despliegue y su configuración. No se han creado usuarios reales, enviado emails, migrado bases ni desplegado estos cambios.
 
 Desarrollo por PR a `develop`, sin merge a `main`.
+
+## CI/CD
+
+- **CI** (`.github/workflows/ci.yml`): en cada PR a `develop` y push a `feat/**`, `fix/**`, `ci/**`. Lint, typecheck, unitarios, build y Playwright (Chromium) con la API simulada. Sin credenciales.
+- **CD**: Netlify, con su integración Git. Producción se publica desde `develop`; cada PR recibe un deploy preview. Configuración en `netlify.toml` y variables en Netlify (ver [docs/deployment.md](docs/deployment.md)).
+- Las páginas se sirven desde el CDN de Netlify; las rutas `/api/**` corren como Netlify Functions (60 s, 6 MB). El audio va directo a GCS.

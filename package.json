@@ -13,7 +13,6 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "google-auth-library": "^10.9.1",
     "jose": "^6.2.16",
     "next": "16.4.5",
     "react": "19.3.1",

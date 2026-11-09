@@ -13,3 +13,9 @@ async function signed(options:{tenant?:string;issuer?:string;verified?:boolean;e
 it('verifies a real RSA signature and tenant/verified claims using only a substituted public key source',async()=>{expect((await verifyIdToken(await signed())).user.id).toBe('test-ana');});
 it('rejects a tampered actual signature',async()=>{const parts=(await signed()).split('.');parts[2]=(parts[2][0]==='A'?'B':'A')+parts[2].slice(1);await expect(verifyIdToken(parts.join('.'))).rejects.toMatchObject({status:401});});
 it.each([{tenant:'nutria-other'},{issuer:'https://securetoken.google.com/other-project'},{verified:false},{expires:Math.floor(Date.now()/1000)-10}])('rejects signed but unauthorized/expired Firebase identity %#',async options=>{await expect(verifyIdToken(await signed(options))).rejects.toBeDefined();});
+it('dedicated project without tenant: accepts tenant-less tokens and rejects tenant tokens',async()=>{
+ vi.stubEnv('FIREBASE_AUTH_TENANT_ID','');
+ const plain=await new SignJWT({email:'ana@example.com',email_verified:true,firebase:{}}).setProtectedHeader({alg:'RS256'}).setSubject('test-ana').setAudience('ritnave-test').setIssuer('https://securetoken.google.com/ritnave-test').setIssuedAt().setExpirationTime('10m').sign(privateKey);
+ expect((await verifyIdToken(plain)).user.id).toBe('test-ana');
+ await expect(verifyIdToken(await signed({tenant:'isolated-tenant'}))).rejects.toMatchObject({status:401});
+});
