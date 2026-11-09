@@ -42,7 +42,7 @@ export FIREBASE_AUTH_TENANT_ID='<tenant-de-ritnave>'
 bash scripts/deploy.sh --apply
 ```
 
-Recursos nuevos: servicio público `ritnave-frontend` (CPU 1, 512 MiB, min0/max2) y su cuenta runtime. Usa el repositorio Artifact Registry `ritnave`, build SA `ritnave-build` y staging dedicados existentes. La build puede facturar CPU/almacenamiento; no enciende la GPU. Runtime necesita únicamente secretAccessor sobre sus dos secretos y run.invoker sobre `ritnave-api`. No necesita acceso directo a Firestore/GCS ni Firebase Admin. El frontend es público; **API y worker continúan privados**.
+Recursos nuevos: servicio público `ritnave-frontend` (CPU 1, 512 MiB, min1/max2: una instancia siempre caliente para que la web cargue sin arranque en frío; API y worker siguen escalando a cero) y su cuenta runtime. Usa el repositorio Artifact Registry `ritnave`, build SA `ritnave-build` y staging dedicados existentes. La build puede facturar CPU/almacenamiento; no enciende la GPU. Runtime necesita únicamente secretAccessor sobre sus dos secretos y run.invoker sobre `ritnave-api`. No necesita acceso directo a Firestore/GCS ni Firebase Admin. El frontend es público; **API y worker continúan privados**.
 
 La identidad de despliegue requiere las capacidades correspondientes para construir, crear/actualizar su servicio y cuenta runtime, conceder invoker en la API y acceso a sus secretos. No usar la cuenta administrativa del agente como identidad runtime.
 

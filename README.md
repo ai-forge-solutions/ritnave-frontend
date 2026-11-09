@@ -39,3 +39,12 @@ Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KE
 Los tests de UI interceptan APIs de forma explícita; no prueban Firebase/Cloud Run en vivo. Los tests de firma usan RSA real con una fuente local de clave pública. El build no necesita secretos. La validación pública de registro/email/login → GPU queda para el despliegue y su configuración. No se han creado usuarios reales, enviado emails, migrado bases ni desplegado estos cambios.
 
 Desarrollo por PR a `develop`, sin merge a `main`.
+
+## CI/CD
+
+- **CI** (`.github/workflows/ci.yml`): en cada PR a `develop` y push a `feat/**`, `fix/**`, `ci/**`. Lint, typecheck, unitarios, build y Playwright (Chromium) con la API simulada. Sin credenciales cloud.
+- **CD** (`.github/workflows/deploy.yml`): tras merge a `develop` (o manual), vuelve a pasar CI y ejecuta `scripts/deploy.sh --release` en el entorno GitHub `production`, y después un smoke de `/api/health` y `/api/ready` en `APP_ORIGIN`.
+- **Sin claves**: GitHub OIDC → Workload Identity Federation → `ritnave-deployer`, configurado una vez con `infra/github-oidc-setup.sh` del repo backend. `--release` solo construye y despliega; la identidad runtime, el acceso a secretos y el invoker de la API los concede un administrador con `--apply`.
+- El servicio mantiene **una instancia siempre caliente** (`min-instances=1`, `--cpu-boost`) para que la web cargue sin arranque en frío. API y worker GPU siguen escalando a cero.
+
+Variables del repositorio (GitHub → Settings → Variables, no secretos): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOYER_SA`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN` (origen público exacto, p. ej. el dominio propio).
