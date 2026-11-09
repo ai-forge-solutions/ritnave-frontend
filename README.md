@@ -20,7 +20,7 @@ El navegador no llama a la API directamente. El servidor del frontend verifica l
 
 ## Configuración pendiente de despliegue
 
-Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KEY` y `SESSION_SECRET`. Configuración no secreta: `FIREBASE_AUTH_PROJECT_ID`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN`, `RITNAVE_API_URL`. Google ADC gestionado por la identidad de Cloud Run; ninguna clave JSON runtime. El backend necesita su nuevo código de verificación Firebase y los mismos proyecto/tenant.
+Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KEY` y `SESSION_SECRET`. Configuración no secreta: `FIREBASE_AUTH_PROJECT_ID`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN`, `RITNAVE_API_URL`. Ninguna credencial de Google en el frontend. El backend verifica el token Firebase con los mismos proyecto/tenant.
 
 ## Límites y comportamiento
 
@@ -36,15 +36,12 @@ Ver [docs/deployment.md](docs/deployment.md). Dos secretos: `FIREBASE_WEB_API_KE
 
 ## Evidencia y límites
 
-Los tests de UI interceptan APIs de forma explícita; no prueban Firebase/Cloud Run en vivo. Los tests de firma usan RSA real con una fuente local de clave pública. El build no necesita secretos. La validación pública de registro/email/login → GPU queda para el despliegue y su configuración. No se han creado usuarios reales, enviado emails, migrado bases ni desplegado estos cambios.
+Los tests de UI interceptan APIs de forma explícita; no prueban Firebase ni la API en vivo. Los tests de firma usan RSA real con una fuente local de clave pública. El build no necesita secretos. La validación pública de registro/email/login → GPU queda para el despliegue y su configuración. No se han creado usuarios reales, enviado emails, migrado bases ni desplegado estos cambios.
 
 Desarrollo por PR a `develop`, sin merge a `main`.
 
 ## CI/CD
 
-- **CI** (`.github/workflows/ci.yml`): en cada PR a `develop` y push a `feat/**`, `fix/**`, `ci/**`. Lint, typecheck, unitarios, build y Playwright (Chromium) con la API simulada. Sin credenciales cloud.
-- **CD** (`.github/workflows/deploy.yml`): tras merge a `develop` (o manual), vuelve a pasar CI y ejecuta `scripts/deploy.sh --release` en el entorno GitHub `production`, y después un smoke de `/api/health` y `/api/ready` en `APP_ORIGIN`.
-- **Sin claves**: GitHub OIDC → Workload Identity Federation → `ritnave-deployer`, configurado una vez con `infra/github-oidc-setup.sh` del repo backend. `--release` solo construye y despliega; la identidad runtime, el acceso a secretos y el invoker de la API los concede un administrador con `--apply`.
-- El servicio mantiene **una instancia siempre caliente** (`min-instances=1`, `--cpu-boost`) para que la web cargue sin arranque en frío. API y worker GPU siguen escalando a cero.
-
-Variables del repositorio (GitHub → Settings → Variables, no secretos): `GCP_WORKLOAD_IDENTITY_PROVIDER`, `GCP_DEPLOYER_SA`, `FIREBASE_AUTH_TENANT_ID`, `APP_ORIGIN` (origen público exacto, p. ej. el dominio propio).
+- **CI** (`.github/workflows/ci.yml`): en cada PR a `develop` y push a `feat/**`, `fix/**`, `ci/**`. Lint, typecheck, unitarios, build y Playwright (Chromium) con la API simulada. Sin credenciales.
+- **CD**: Netlify, con su integración Git. Producción se publica desde `develop`; cada PR recibe un deploy preview. Configuración en `netlify.toml` y variables en Netlify (ver [docs/deployment.md](docs/deployment.md)).
+- Las páginas se sirven desde el CDN de Netlify; las rutas `/api/**` corren como Netlify Functions (60 s, 6 MB). El audio va directo a GCS.
