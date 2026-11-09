@@ -32,10 +32,11 @@ it('allows insecure localhost only in explicit development or test mode', () => 
   vi.stubEnv('NODE_ENV',''); expect(getConfig).toThrow();
 });
 describe('server config', () => {
-  it('requires explicit tenant and never exposes raw errors', async () => {
+  it('accepts an explicit tenant or none, rejects invalid ones and never exposes raw errors', async () => {
     expect(getConfig().tenantId).toBe('tenant');
     vi.stubEnv('FIREBASE_AUTH_TENANT_ID','');
-    expect(getConfig).toThrow();
+    expect(getConfig().tenantId).toBeUndefined();
+    for (const bad of ['default',' tenant','a/b']) { vi.stubEnv('FIREBASE_AUTH_TENANT_ID',bad); expect(getConfig).toThrow(); }
     try { getConfig(); } catch (e) { expect(errorResponse(e).status).toBe(503); }
     expect(await errorResponse(new Error('secret')).text()).not.toContain('secret');
   });
